@@ -14,6 +14,7 @@ function Dashboard({ onLogout }) {
   const [workspaceInitialTab, setWorkspaceInitialTab] = useState(null);
   const [workspaceInitialItem, setWorkspaceInitialItem] = useState(null);
   const [data, setData] = useState(() => storage.loadData());
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     storage.seedData();
@@ -65,9 +66,9 @@ function Dashboard({ onLogout }) {
 
   return (
     <div className="flex h-full noise-texture">
-      <Sidebar activeView={getActiveNav()} onNavigate={handleNavigate} onLogout={onLogout} />
+      <Sidebar activeView={getActiveNav()} onNavigate={handleNavigate} onLogout={onLogout} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(o => !o)} />
 
-      <main className="flex-1 ml-[220px] p-8 overflow-y-auto h-full">
+      <main className="flex-1 p-8 overflow-y-auto h-full transition-all duration-300" style={{ marginLeft: sidebarOpen ? 220 : 0, paddingLeft: sidebarOpen ? 32 : 56 }}>
         <div className="max-w-5xl mx-auto pb-8">
           {activeView === 'home' && (
             <BusinessOverview
