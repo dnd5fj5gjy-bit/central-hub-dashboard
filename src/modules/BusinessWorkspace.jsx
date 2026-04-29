@@ -3,6 +3,7 @@ import {
   ArrowLeft, Edit3, Trash2, Plus, ChevronDown, ChevronRight,
   Star, ExternalLink, FileText, Briefcase, Megaphone,
   ScrollText, Presentation, Link2, StickyNote, AlertTriangle,
+  FolderOpen, File,
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import ItemForm, { sectionFields } from '../components/ItemForm';
@@ -15,14 +16,15 @@ const tabs = [
   { key: 'scripts', label: 'Scripts', icon: ScrollText },
   { key: 'decks', label: 'Decks', icon: Presentation },
   { key: 'links', label: 'Links', icon: Link2 },
+  { key: 'documents', label: 'Documents', icon: File },
   { key: 'notes', label: 'Notes', icon: StickyNote },
 ];
 
-const statusColors = {
-  active: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', dot: 'bg-emerald-400' },
-  'on-hold': { bg: 'bg-yellow-500/15', text: 'text-yellow-400', dot: 'bg-yellow-400' },
-  complete: { bg: 'bg-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
-  archived: { bg: 'bg-gray-500/15', text: 'text-gray-400', dot: 'bg-gray-400' },
+const statusBadge = {
+  Active: 'badge-green',
+  'On Hold': 'badge-amber',
+  Complete: 'badge-blue',
+  Archived: 'badge-grey',
 };
 
 export default function BusinessWorkspace({ businessId, data, onRefresh, onBack, initialTab, initialItemId }) {
@@ -37,18 +39,18 @@ export default function BusinessWorkspace({ businessId, data, onRefresh, onBack,
 
   if (!business) {
     return (
-      <div className="animate-in flex flex-col items-center justify-center py-20">
-        <AlertTriangle size={40} className="text-[#5A5A6A] mb-4" />
-        <p className="text-[15px] text-[#8A8A9A]">Business not found</p>
-        <button onClick={onBack} className="mt-4 text-[13px] text-[#3B82F6] hover:underline cursor-pointer">
+      <div className="flex flex-col items-center justify-center py-20 animate-fade-slide-up">
+        <AlertTriangle size={40} className="mb-4" style={{ color: '#6B6B7B' }} />
+        <p className="text-[15px]" style={{ color: '#A0A0B0' }}>Business not found</p>
+        <button onClick={onBack} className="mt-4 text-[13px] cursor-pointer hover:underline" style={{ color: '#3B82F6' }}>
           Go back
         </button>
       </div>
     );
   }
 
-  const items = business.items[activeTab] || [];
-  const sc = statusColors[business.status] || statusColors.archived;
+  const items = business.sections[activeTab] || [];
+  const badgeClass = statusBadge[business.status] || 'badge-grey';
 
   function toggleExpanded(id) {
     setExpandedItems((prev) => {
@@ -105,53 +107,72 @@ export default function BusinessWorkspace({ businessId, data, onRefresh, onBack,
     setShowEditBusiness(true);
   }
 
-  const inputClasses =
-    'w-full bg-white/[0.05] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#F0F0F5] placeholder-[#5A5A6A] focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]/30 transition-colors';
-
   function getItemTitle(item) {
     return item.title || item.name || 'Untitled';
   }
 
-  function getItemTypeBadge(item) {
-    return item.type || item.category || null;
+  function getItemBadge(item) {
+    return item.type || item.category || item.fileType || null;
   }
 
   function getItemBody(item) {
-    return item.body || item.description || item.summary || item.note || null;
+    return item.body || item.description || item.summary || item.content || item.note || null;
   }
 
+  // Detect first non-empty tab for smart default
+  const firstPopulatedTab = tabs.find((t) => (business.sections[t.key] || []).length > 0);
+
+  // Auto-select first populated tab if current tab has 0 items and user hasn't manually selected
+  // Only on initial load when no initialTab specified
+  React.useEffect(() => {
+    if (!initialTab && firstPopulatedTab && items.length === 0) {
+      setActiveTab(firstPopulatedTab.key);
+    }
+  }, []);
+
   return (
-    <div className="animate-in">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 animate-fade-slide-up">
         <button
           onClick={onBack}
-          className="p-2 rounded-lg hover:bg-white/[0.06] text-[#5A5A6A] hover:text-[#8A8A9A] transition-colors cursor-pointer"
+          className="p-2 rounded-lg cursor-pointer transition-colors"
+          style={{ color: '#6B6B7B' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#A0A0B0'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B6B7B'; }}
         >
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-[#F0F0F5] truncate">{business.name}</h1>
-            <span className={`flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ${sc.bg} ${sc.text}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+            <h1 className="text-xl font-semibold truncate" style={{ color: '#F0F0F5' }}>{business.name}</h1>
+            <span className={`badge ${badgeClass} text-[11px] shrink-0`}>
               {business.status}
             </span>
           </div>
-          <p className="text-[13px] text-[#5A5A6A] mt-0.5">{business.sector}</p>
+          <p className="text-[13px] mt-0.5" style={{ color: '#6B6B7B' }}>
+            {business.sector}
+            {business.description && <span> &mdash; {business.description}</span>}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={openEditBusiness}
-            className="p-2 rounded-lg hover:bg-white/[0.06] text-[#5A5A6A] hover:text-[#8A8A9A] transition-colors cursor-pointer"
+            className="p-2 rounded-lg cursor-pointer transition-colors"
+            style={{ color: '#6B6B7B' }}
             title="Edit business"
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#A0A0B0'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B6B7B'; }}
           >
             <Edit3 size={16} />
           </button>
           <button
             onClick={() => setShowDeleteConfirm('business')}
-            className="p-2 rounded-lg hover:bg-red-500/10 text-[#5A5A6A] hover:text-red-400 transition-colors cursor-pointer"
+            className="p-2 rounded-lg cursor-pointer transition-colors"
+            style={{ color: '#6B6B7B' }}
             title="Delete business"
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = '#F87171'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B6B7B'; }}
           >
             <Trash2 size={16} />
           </button>
@@ -159,25 +180,27 @@ export default function BusinessWorkspace({ businessId, data, onRefresh, onBack,
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1">
+      <div className="tab-bar mb-6 animate-fade-slide-up stagger-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
-          const count = (business.items[tab.key] || []).length;
+          const count = (business.sections[tab.key] || []).length;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-[rgba(59,130,246,0.15)] text-[#3B82F6]'
-                  : 'text-[#5A5A6A] hover:text-[#8A8A9A] hover:bg-white/[0.04]'
-              }`}
+              className={`tab-item flex items-center gap-2 ${isActive ? 'tab-item-active' : ''}`}
             >
               <Icon size={14} />
               {tab.label}
               {count > 0 && (
-                <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-[#3B82F6]/20 text-[#3B82F6]' : 'bg-white/[0.06] text-[#5A5A6A]'}`}>
+                <span
+                  className="text-[11px] px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: isActive ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.06)',
+                    color: isActive ? '#3B82F6' : '#6B6B7B',
+                  }}
+                >
                   {count}
                 </span>
               )}
@@ -186,71 +209,92 @@ export default function BusinessWorkspace({ businessId, data, onRefresh, onBack,
         })}
       </div>
 
-      {/* Add button */}
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-[13px] text-[#5A5A6A]">
-          {items.length} {activeTab.slice(0, -1)}{items.length !== 1 ? 's' : ''}
+      {/* Sub-header */}
+      <div className="flex justify-between items-center mb-4 animate-fade-slide-up stagger-2">
+        <p className="text-[13px]" style={{ color: '#6B6B7B' }}>
+          {items.length} {activeTab === 'notes' ? 'note' : activeTab.slice(0, -1)}{items.length !== 1 ? 's' : ''}
         </p>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 text-[13px] font-medium text-[#3B82F6] hover:text-[#60A5FA] transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-[13px] font-medium cursor-pointer transition-colors"
+          style={{ color: '#3B82F6' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#60A5FA'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#3B82F6'; }}
         >
           <Plus size={14} />
-          Add {activeTab.slice(0, -1)}
+          Add {activeTab === 'notes' ? 'note' : activeTab.slice(0, -1)}
         </button>
       </div>
 
-      {/* Items list */}
+      {/* Items */}
       {items.length === 0 ? (
-        <div className="glass-static flex flex-col items-center justify-center py-12 text-center">
-          {React.createElement(tabs.find((t) => t.key === activeTab)?.icon || FileText, {
-            size: 32,
-            className: 'text-[#5A5A6A] mb-3',
-          })}
-          <p className="text-[14px] text-[#8A8A9A] mb-1">No {activeTab} yet</p>
-          <p className="text-[12px] text-[#5A5A6A]">
-            Add your first {activeTab.slice(0, -1)} to get started
+        <div className="glass-card flex flex-col items-center justify-center py-14 text-center animate-fade-slide-up stagger-3">
+          <FolderOpen size={36} className="mb-3" style={{ color: '#6B6B7B' }} />
+          <p className="text-[14px] mb-1" style={{ color: '#A0A0B0' }}>No {activeTab} yet</p>
+          <p className="text-[12px]" style={{ color: '#6B6B7B' }}>
+            Add your first {activeTab === 'notes' ? 'note' : activeTab.slice(0, -1)} to get started
           </p>
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => {
+          {items.map((item, i) => {
             const isExpanded = expandedItems.has(item.id);
-            const isFav = storage.isFavourite(data.favourites, businessId, activeTab, item.id);
-            const typeBadge = getItemTypeBadge(item);
+            const isFav = item.favourite;
+            const badge = getItemBadge(item);
             const body = getItemBody(item);
 
             return (
-              <div key={item.id} className="glass-static overflow-hidden">
+              <div
+                key={item.id}
+                className="glass-card overflow-hidden animate-fade-slide-up"
+                style={{ animationDelay: `${(i + 3) * 0.04}s` }}
+              >
+                {/* Row header */}
                 <div
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
+                  style={{ borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.06)' : 'none' }}
                   onClick={() => toggleExpanded(item.id)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <span className="text-[#5A5A6A]">
+                  <span style={{ color: '#6B6B7B' }}>
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </span>
-                  <span className="flex-1 text-[13px] font-medium text-[#F0F0F5] truncate">
+                  <span className="flex-1 text-[13px] font-medium truncate" style={{ color: '#F0F0F5' }}>
                     {getItemTitle(item)}
                   </span>
-                  {typeBadge && (
-                    <span className="text-[11px] font-medium text-[#8A8A9A] bg-white/[0.05] px-2 py-0.5 rounded-md shrink-0">
-                      {typeBadge}
+                  {isFav && (
+                    <Star size={12} fill="#FBBF24" style={{ color: '#FBBF24' }} className="shrink-0" />
+                  )}
+                  {badge && (
+                    <span
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-md shrink-0"
+                      style={{ background: 'rgba(255,255,255,0.05)', color: '#A0A0B0' }}
+                    >
+                      {badge}
                     </span>
                   )}
-                  {item.status && (
-                    <span className="text-[11px] font-medium text-[#8A8A9A] bg-white/[0.05] px-2 py-0.5 rounded-md shrink-0">
+                  {item.status && activeTab === 'projects' && (
+                    <span
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-md shrink-0"
+                      style={{ background: 'rgba(255,255,255,0.05)', color: '#A0A0B0' }}
+                    >
                       {item.status}
                     </span>
                   )}
-                  <span className="text-[11px] text-[#5A5A6A] shrink-0">
-                    {new Date(item.createdAt).toLocaleDateString()}
+                  <span className="text-[11px] shrink-0" style={{ color: '#6B6B7B' }}>
+                    {new Date(item.createdAt).toLocaleDateString('en-GB')}
                   </span>
                 </div>
 
+                {/* Expanded body */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 pt-1 border-t border-white/[0.06] animate-in">
+                  <div className="px-4 pb-4 pt-3 animate-fade-in">
                     {body && (
-                      <p className="text-[13px] text-[#8A8A9A] whitespace-pre-wrap mb-3 leading-relaxed">
+                      <p
+                        className="text-[13px] whitespace-pre-wrap mb-3 leading-relaxed"
+                        style={{ color: '#A0A0B0' }}
+                      >
                         {body}
                       </p>
                     )}
@@ -259,11 +303,14 @@ export default function BusinessWorkspace({ businessId, data, onRefresh, onBack,
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[13px] text-[#3B82F6] hover:text-[#60A5FA] mb-3 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-[13px] mb-3 transition-colors"
+                        style={{ color: '#3B82F6' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#60A5FA'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#3B82F6'; }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <ExternalLink size={12} />
-                        {item.url}
+                        {item.url.length > 60 ? item.url.slice(0, 60) + '...' : item.url}
                       </a>
                     )}
                     {item.link && !item.url && (
@@ -271,41 +318,61 @@ export default function BusinessWorkspace({ businessId, data, onRefresh, onBack,
                         href={item.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[13px] text-[#3B82F6] hover:text-[#60A5FA] mb-3 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-[13px] mb-3 transition-colors"
+                        style={{ color: '#3B82F6' }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <ExternalLink size={12} />
-                        {item.link}
+                        {item.link.length > 60 ? item.link.slice(0, 60) + '...' : item.link}
                       </a>
                     )}
                     {item.startDate && (
-                      <p className="text-[12px] text-[#5A5A6A] mb-3">
-                        Start date: {new Date(item.startDate).toLocaleDateString()}
+                      <p className="text-[12px] mb-3" style={{ color: '#6B6B7B' }}>
+                        Start date: {new Date(item.startDate).toLocaleDateString('en-GB')}
                       </p>
                     )}
+                    {item.note && item.body && (
+                      <p className="text-[12px] mb-3 italic" style={{ color: '#6B6B7B' }}>
+                        {item.note}
+                      </p>
+                    )}
+
+                    {/* Actions */}
                     <div className="flex items-center gap-2 pt-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleToggleFav(item.id); }}
-                        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                          isFav
-                            ? 'text-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/15'
-                            : 'text-[#5A5A6A] hover:text-yellow-400 hover:bg-white/[0.04]'
-                        }`}
+                        className="p-1.5 rounded-md cursor-pointer transition-colors"
+                        style={{
+                          color: isFav ? '#FBBF24' : '#6B6B7B',
+                          background: isFav ? 'rgba(251,191,36,0.1)' : 'transparent',
+                        }}
                         title={isFav ? 'Remove from favourites' : 'Add to favourites'}
+                        onMouseEnter={(e) => {
+                          if (!isFav) { e.currentTarget.style.color = '#FBBF24'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isFav) { e.currentTarget.style.color = '#6B6B7B'; e.currentTarget.style.background = 'transparent'; }
+                        }}
                       >
                         <Star size={14} fill={isFav ? 'currentColor' : 'none'} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingItem(item); }}
-                        className="p-1.5 rounded-md text-[#5A5A6A] hover:text-[#8A8A9A] hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        className="p-1.5 rounded-md cursor-pointer transition-colors"
+                        style={{ color: '#6B6B7B' }}
                         title="Edit"
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#A0A0B0'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#6B6B7B'; e.currentTarget.style.background = 'transparent'; }}
                       >
                         <Edit3 size={14} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(item.id); }}
-                        className="p-1.5 rounded-md text-[#5A5A6A] hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-md cursor-pointer transition-colors"
+                        style={{ color: '#6B6B7B' }}
                         title="Delete"
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#6B6B7B'; e.currentTarget.style.background = 'transparent'; }}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -318,123 +385,75 @@ export default function BusinessWorkspace({ businessId, data, onRefresh, onBack,
         </div>
       )}
 
-      {/* Add item modal */}
-      <Modal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title={`Add ${activeTab.slice(0, -1)}`}
-      >
-        <ItemForm
-          section={activeTab}
-          onSubmit={handleAddItem}
-          onCancel={() => setShowAddModal(false)}
-        />
+      {/* Add Modal */}
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={`Add ${activeTab === 'notes' ? 'note' : activeTab.slice(0, -1)}`}>
+        <ItemForm section={activeTab} onSubmit={handleAddItem} onCancel={() => setShowAddModal(false)} />
       </Modal>
 
-      {/* Edit item modal */}
-      <Modal
-        isOpen={!!editingItem}
-        onClose={() => setEditingItem(null)}
-        title={`Edit ${activeTab.slice(0, -1)}`}
-      >
+      {/* Edit Modal */}
+      <Modal isOpen={!!editingItem} onClose={() => setEditingItem(null)} title={`Edit ${activeTab === 'notes' ? 'note' : activeTab.slice(0, -1)}`}>
         {editingItem && (
-          <ItemForm
-            section={activeTab}
-            initialData={editingItem}
-            onSubmit={handleEditItem}
-            onCancel={() => setEditingItem(null)}
-          />
+          <ItemForm section={activeTab} initialData={editingItem} onSubmit={handleEditItem} onCancel={() => setEditingItem(null)} />
         )}
       </Modal>
 
-      {/* Edit business modal */}
-      <Modal
-        isOpen={showEditBusiness}
-        onClose={() => setShowEditBusiness(false)}
-        title="Edit Business"
-      >
+      {/* Edit Business Modal */}
+      <Modal isOpen={showEditBusiness} onClose={() => setShowEditBusiness(false)} title="Edit Business">
         <form onSubmit={handleEditBusiness} className="space-y-4">
           <div>
-            <label className="block text-[12px] font-medium text-[#8A8A9A] mb-1.5 uppercase tracking-wider">Name</label>
-            <input
-              type="text"
-              value={businessForm.name || ''}
-              onChange={(e) => setBusinessForm((p) => ({ ...p, name: e.target.value }))}
-              className={inputClasses}
-            />
+            <label className="block text-[12px] font-medium mb-1.5 uppercase tracking-wider" style={{ color: '#A0A0B0' }}>Name</label>
+            <input type="text" value={businessForm.name || ''} onChange={(e) => setBusinessForm((p) => ({ ...p, name: e.target.value }))} className="input-field" />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-[#8A8A9A] mb-1.5 uppercase tracking-wider">Sector</label>
-            <input
-              type="text"
-              value={businessForm.sector || ''}
-              onChange={(e) => setBusinessForm((p) => ({ ...p, sector: e.target.value }))}
-              className={inputClasses}
-            />
+            <label className="block text-[12px] font-medium mb-1.5 uppercase tracking-wider" style={{ color: '#A0A0B0' }}>Sector</label>
+            <input type="text" value={businessForm.sector || ''} onChange={(e) => setBusinessForm((p) => ({ ...p, sector: e.target.value }))} className="input-field" />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-[#8A8A9A] mb-1.5 uppercase tracking-wider">Description</label>
-            <textarea
-              value={businessForm.description || ''}
-              onChange={(e) => setBusinessForm((p) => ({ ...p, description: e.target.value }))}
-              rows={3}
-              className={inputClasses + ' resize-y'}
-            />
+            <label className="block text-[12px] font-medium mb-1.5 uppercase tracking-wider" style={{ color: '#A0A0B0' }}>Description</label>
+            <textarea value={businessForm.description || ''} onChange={(e) => setBusinessForm((p) => ({ ...p, description: e.target.value }))} rows={3} className="input-field" />
           </div>
           <div>
-            <label className="block text-[12px] font-medium text-[#8A8A9A] mb-1.5 uppercase tracking-wider">Status</label>
-            <select
-              value={businessForm.status || 'active'}
-              onChange={(e) => setBusinessForm((p) => ({ ...p, status: e.target.value }))}
-              className={inputClasses + ' cursor-pointer'}
-            >
-              <option value="active" className="bg-[#0A0A0F]">Active</option>
-              <option value="on-hold" className="bg-[#0A0A0F]">On Hold</option>
-              <option value="complete" className="bg-[#0A0A0F]">Complete</option>
-              <option value="archived" className="bg-[#0A0A0F]">Archived</option>
+            <label className="block text-[12px] font-medium mb-1.5 uppercase tracking-wider" style={{ color: '#A0A0B0' }}>Status</label>
+            <select value={businessForm.status || 'Active'} onChange={(e) => setBusinessForm((p) => ({ ...p, status: e.target.value }))} className="input-field">
+              <option value="Active" style={{ background: '#0E0F14' }}>Active</option>
+              <option value="On Hold" style={{ background: '#0E0F14' }}>On Hold</option>
+              <option value="Complete" style={{ background: '#0E0F14' }}>Complete</option>
+              <option value="Archived" style={{ background: '#0E0F14' }}>Archived</option>
             </select>
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white text-[13px] font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
-              Save Changes
-            </button>
-            <button type="button" onClick={() => setShowEditBusiness(false)} className="flex-1 bg-white/[0.05] hover:bg-white/[0.08] text-[#8A8A9A] text-[13px] font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
-              Cancel
-            </button>
+            <button type="submit" className="btn-primary flex-1">Save Changes</button>
+            <button type="button" onClick={() => setShowEditBusiness(false)} className="btn-secondary flex-1">Cancel</button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete confirmation modal */}
-      <Modal
-        isOpen={!!showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(null)}
-        title="Confirm Delete"
-      >
+      {/* Delete Confirm */}
+      <Modal isOpen={!!showDeleteConfirm} onClose={() => setShowDeleteConfirm(null)} title="Confirm Delete">
         <div className="text-center py-2">
-          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle size={24} className="text-red-400" />
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'rgba(239,68,68,0.1)' }}
+          >
+            <AlertTriangle size={24} style={{ color: '#F87171' }} />
           </div>
-          <p className="text-[14px] text-[#F0F0F5] mb-1">
+          <p className="text-[14px] mb-1" style={{ color: '#F0F0F5' }}>
             {showDeleteConfirm === 'business'
               ? `Delete "${business.name}" and all its items?`
               : 'Delete this item?'}
           </p>
-          <p className="text-[13px] text-[#5A5A6A] mb-6">This action cannot be undone.</p>
+          <p className="text-[13px] mb-6" style={{ color: '#6B6B7B' }}>This action cannot be undone.</p>
           <div className="flex gap-3">
             <button
               onClick={() => {
                 if (showDeleteConfirm === 'business') handleDeleteBusiness();
                 else handleDeleteItem(showDeleteConfirm);
               }}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white text-[13px] font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+              className="btn-danger flex-1"
             >
               Delete
             </button>
-            <button
-              onClick={() => setShowDeleteConfirm(null)}
-              className="flex-1 bg-white/[0.05] hover:bg-white/[0.08] text-[#8A8A9A] text-[13px] font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
+            <button onClick={() => setShowDeleteConfirm(null)} className="btn-secondary flex-1">
               Cancel
             </button>
           </div>

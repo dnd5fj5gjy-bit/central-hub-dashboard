@@ -28,16 +28,24 @@ export default function Modal({ isOpen, onClose, title, children, wide }) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="modal-overlay"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className={`relative glass-static animate-in p-6 ${wide ? 'w-full max-w-2xl' : 'w-full max-w-md'} max-h-[85vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[15px] font-semibold text-[#F0F0F5]">{title}</h2>
+      <div className={`modal-body ${wide ? 'max-w-2xl!' : ''}`}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-[15px] font-semibold" style={{ color: '#F0F0F5' }}>{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-[#5A5A6A] hover:text-[#8A8A9A] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg cursor-pointer transition-colors"
+            style={{ color: '#6B6B7B' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.color = '#A0A0B0';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = '#6B6B7B';
+            }}
           >
             <X size={16} />
           </button>

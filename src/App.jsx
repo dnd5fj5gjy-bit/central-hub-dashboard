@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import PasswordGate from './components/PasswordGate';
 import Sidebar from './components/Sidebar';
 import BusinessOverview from './modules/BusinessOverview';
 import BusinessWorkspace from './modules/BusinessWorkspace';
@@ -7,33 +8,38 @@ import GlobalSearch from './modules/GlobalSearch';
 import ActivityFeed from './modules/ActivityFeed';
 import * as storage from './lib/storage';
 
-export default function App() {
-  const [activeView, setActiveView] = useState('overview');
+function Dashboard({ onLogout }) {
+  const [activeView, setActiveView] = useState('home');
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [workspaceInitialTab, setWorkspaceInitialTab] = useState(null);
   const [workspaceInitialItem, setWorkspaceInitialItem] = useState(null);
-  const [data, setData] = useState(() => storage.load());
+  const [data, setData] = useState(() => storage.loadData());
 
-  const refresh = useCallback(() => {
-    setData(storage.load());
+  useEffect(() => {
+    storage.seedData();
+    setData(storage.loadData());
   }, []);
 
-  function handleSelectBusiness(businessId) {
-    setSelectedBusiness(businessId);
+  const refresh = useCallback(() => {
+    setData(storage.loadData());
+  }, []);
+
+  function handleSelectBusiness(bizId) {
+    setSelectedBusiness(bizId);
     setWorkspaceInitialTab(null);
     setWorkspaceInitialItem(null);
     setActiveView('workspace');
   }
 
-  function handleBackToOverview() {
+  function handleBackToHome() {
     setSelectedBusiness(null);
     setWorkspaceInitialTab(null);
     setWorkspaceInitialItem(null);
-    setActiveView('overview');
+    setActiveView('home');
   }
 
   function handleNavigate(view) {
-    if (view === 'overview') {
+    if (view === 'home') {
       setSelectedBusiness(null);
       setWorkspaceInitialTab(null);
       setWorkspaceInitialItem(null);
@@ -41,33 +47,29 @@ export default function App() {
     setActiveView(view);
   }
 
-  function handleNavigateToItem(businessId, section, itemId) {
+  function handleNavigateToItem(bizId, section, itemId) {
     if (!section && !itemId) {
-      // Navigate to business workspace, default tab
-      handleSelectBusiness(businessId);
+      handleSelectBusiness(bizId);
       return;
     }
-    setSelectedBusiness(businessId);
+    setSelectedBusiness(bizId);
     setWorkspaceInitialTab(section);
     setWorkspaceInitialItem(itemId);
     setActiveView('workspace');
   }
 
-  function getActiveNavItem() {
-    if (activeView === 'workspace' || activeView === 'overview') return 'overview';
-    if (activeView === 'favourites') return 'favourites';
-    if (activeView === 'search') return 'search';
-    if (activeView === 'activity') return 'activity';
-    return 'overview';
+  function getActiveNav() {
+    if (activeView === 'workspace' || activeView === 'home') return 'home';
+    return activeView;
   }
 
   return (
-    <div className="flex h-full">
-      <Sidebar activeView={getActiveNavItem()} onNavigate={handleNavigate} />
+    <div className="flex h-full noise-texture">
+      <Sidebar activeView={getActiveNav()} onNavigate={handleNavigate} onLogout={onLogout} />
 
-      <main className="flex-1 ml-[220px] p-8 overflow-y-auto">
-        <div className="max-w-5xl mx-auto">
-          {activeView === 'overview' && (
+      <main className="flex-1 ml-[220px] p-8 overflow-y-auto h-full">
+        <div className="max-w-5xl mx-auto pb-8">
+          {activeView === 'home' && (
             <BusinessOverview
               data={data}
               onRefresh={refresh}
@@ -81,7 +83,7 @@ export default function App() {
               businessId={selectedBusiness}
               data={data}
               onRefresh={refresh}
-              onBack={handleBackToOverview}
+              onBack={handleBackToHome}
               initialTab={workspaceInitialTab}
               initialItemId={workspaceInitialItem}
             />
@@ -106,5 +108,13 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <PasswordGate>
+      {({ onLogout }) => <Dashboard onLogout={onLogout} />}
+    </PasswordGate>
   );
 }

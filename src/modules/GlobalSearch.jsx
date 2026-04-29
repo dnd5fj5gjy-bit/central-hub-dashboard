@@ -5,46 +5,41 @@ export default function GlobalSearch({ data, onNavigateToItem }) {
   const [query, setQuery] = useState('');
 
   const results = useMemo(() => {
-    if (!query.trim()) return [];
+    if (!query.trim() || query.trim().length < 2) return [];
     const q = query.toLowerCase();
     const matches = [];
 
-    (data.businesses || []).forEach((business) => {
-      // Search business name/description
-      if (business.name.toLowerCase().includes(q) || (business.description || '').toLowerCase().includes(q)) {
+    (data.businesses || []).forEach((biz) => {
+      if (biz.name.toLowerCase().includes(q) || (biz.description || '').toLowerCase().includes(q)) {
         matches.push({
           type: 'business',
-          businessId: business.id,
-          businessName: business.name,
-          title: business.name,
-          subtitle: business.sector,
+          businessId: biz.id,
+          businessName: biz.name,
+          title: biz.name,
+          subtitle: biz.sector,
           section: null,
           itemId: null,
         });
       }
 
-      // Search all items
-      const sections = Object.keys(business.items || {});
+      const sections = Object.keys(biz.sections || {});
       sections.forEach((section) => {
-        (business.items[section] || []).forEach((item) => {
-          const title = item.title || item.name || '';
-          const body = item.body || item.description || item.summary || item.note || '';
-          const url = item.url || item.link || '';
+        (biz.sections[section] || []).forEach((item) => {
+          const searchable = [item.title, item.name, item.body, item.description, item.summary, item.note, item.content, item.url, item.link]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
 
-          if (
-            title.toLowerCase().includes(q) ||
-            body.toLowerCase().includes(q) ||
-            url.toLowerCase().includes(q)
-          ) {
+          if (searchable.includes(q)) {
             matches.push({
               type: section,
-              businessId: business.id,
-              businessName: business.name,
-              title: title || 'Untitled',
-              subtitle: `${business.name} / ${section}`,
+              businessId: biz.id,
+              businessName: biz.name,
+              title: item.title || item.name || 'Untitled',
+              subtitle: `${biz.name} / ${section}`,
               section,
               itemId: item.id,
-              badge: item.type || item.category || null,
+              badge: item.type || item.category || item.fileType || null,
             });
           }
         });
@@ -72,49 +67,51 @@ export default function GlobalSearch({ data, onNavigateToItem }) {
     scripts: 'Scripts',
     decks: 'Decks',
     links: 'Links',
+    documents: 'Documents',
     notes: 'Notes',
   };
 
   return (
-    <div className="animate-in">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-[#F0F0F5]">Search</h1>
-        <p className="text-[13px] text-[#5A5A6A] mt-1">Find anything across all businesses</p>
+    <div>
+      <div className="mb-6 animate-fade-slide-up">
+        <h1 className="text-xl font-semibold" style={{ color: '#F0F0F5' }}>Search</h1>
+        <p className="text-[13px] mt-1" style={{ color: '#6B6B7B' }}>Find anything across all businesses</p>
       </div>
 
-      <div className="relative mb-6">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5A5A6A]" />
+      <div className="relative mb-6 animate-fade-slide-up stagger-1">
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6B6B7B' }} />
         <input
           type="text"
-          placeholder="Search businesses, projects, briefs, notes..."
+          placeholder="Search businesses, projects, briefs, documents, notes..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
-          className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-3 pl-11 text-[14px] text-[#F0F0F5] placeholder-[#5A5A6A] focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6]/30 transition-colors"
+          className="input-field pl-11 py-3 text-[14px]"
+          style={{ borderRadius: '12px' }}
         />
       </div>
 
-      {query.trim() && results.length === 0 && (
-        <div className="glass-static flex flex-col items-center justify-center py-12 text-center">
-          <Search size={32} className="text-[#5A5A6A] mb-3" />
-          <p className="text-[14px] text-[#8A8A9A] mb-1">No results found</p>
-          <p className="text-[12px] text-[#5A5A6A]">Try different keywords</p>
+      {query.trim().length >= 2 && results.length === 0 && (
+        <div className="glass-card flex flex-col items-center justify-center py-12 text-center animate-fade-slide-up">
+          <Search size={32} className="mb-3" style={{ color: '#6B6B7B' }} />
+          <p className="text-[14px] mb-1" style={{ color: '#A0A0B0' }}>No results found</p>
+          <p className="text-[12px]" style={{ color: '#6B6B7B' }}>Try different keywords</p>
         </div>
       )}
 
-      {!query.trim() && (
-        <div className="glass-static flex flex-col items-center justify-center py-12 text-center">
-          <FileText size={32} className="text-[#5A5A6A] mb-3" />
-          <p className="text-[14px] text-[#8A8A9A] mb-1">Start typing to search</p>
-          <p className="text-[12px] text-[#5A5A6A]">Results appear as you type</p>
+      {(!query.trim() || query.trim().length < 2) && (
+        <div className="glass-card flex flex-col items-center justify-center py-12 text-center animate-fade-slide-up stagger-2">
+          <FileText size={32} className="mb-3" style={{ color: '#6B6B7B' }} />
+          <p className="text-[14px] mb-1" style={{ color: '#A0A0B0' }}>Start typing to search</p>
+          <p className="text-[12px]" style={{ color: '#6B6B7B' }}>Results appear as you type (min 2 characters)</p>
         </div>
       )}
 
       {Object.keys(grouped).length > 0 && (
         <div className="space-y-6">
           {Object.entries(grouped).map(([type, items]) => (
-            <div key={type}>
-              <h3 className="text-[12px] font-semibold text-[#5A5A6A] uppercase tracking-wider mb-2">
+            <div key={type} className="animate-fade-slide-up">
+              <h3 className="text-[12px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#6B6B7B' }}>
                 {sectionLabels[type] || type} ({items.length})
               </h3>
               <div className="space-y-1.5">
@@ -128,20 +125,27 @@ export default function GlobalSearch({ data, onNavigateToItem }) {
                         onNavigateToItem(item.businessId, null, null);
                       }
                     }}
-                    className="glass flex items-center gap-3 px-4 py-3 cursor-pointer group"
+                    className="glass-card glass-card-hover flex items-center gap-3 px-4 py-3 cursor-pointer group"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-[#F0F0F5] truncate group-hover:text-[#3B82F6] transition-colors">
+                      <p className="text-[13px] font-medium truncate transition-colors group-hover:text-[#3B82F6]" style={{ color: '#F0F0F5' }}>
                         {item.title}
                       </p>
-                      <p className="text-[11px] text-[#5A5A6A] mt-0.5">{item.subtitle}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: '#6B6B7B' }}>{item.subtitle}</p>
                     </div>
                     {item.badge && (
-                      <span className="text-[11px] font-medium text-[#8A8A9A] bg-white/[0.05] px-2 py-0.5 rounded-md shrink-0">
+                      <span
+                        className="text-[11px] font-medium px-2 py-0.5 rounded-md shrink-0"
+                        style={{ background: 'rgba(255,255,255,0.05)', color: '#A0A0B0' }}
+                      >
                         {item.badge}
                       </span>
                     )}
-                    <ArrowRight size={14} className="text-[#5A5A6A] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    <ArrowRight
+                      size={14}
+                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ color: '#6B6B7B' }}
+                    />
                   </div>
                 ))}
               </div>
