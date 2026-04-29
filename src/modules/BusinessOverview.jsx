@@ -116,56 +116,79 @@ export default function BusinessOverview({ data, onRefresh, onSelectBusiness }) 
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-3">
           {filtered.map((biz, i) => {
             const badgeClass = statusBadge[biz.status] || 'badge-grey';
             const count = storage.getItemCount(biz);
+            const sectionCounts = {};
+            const sectionNames = ['projects','briefs','proposals','scripts','decks','links','documents','notes'];
+            sectionNames.forEach(s => {
+              const c = (biz.sections?.[s] || []).length;
+              if (c > 0) sectionCounts[s] = c;
+            });
             return (
               <div
                 key={biz.id}
                 onClick={() => onSelectBusiness(biz.id)}
-                className={`glass-card glass-card-hover p-5 cursor-pointer group animate-fade-slide-up`}
+                className={`glass-card glass-card-hover p-6 cursor-pointer group animate-fade-slide-up`}
                 style={{ animationDelay: `${(i + 2) * 0.05}s` }}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <h3
-                    className="text-[15px] font-semibold transition-colors"
-                    style={{ color: '#F0F0F5' }}
-                  >
-                    {biz.name}
-                  </h3>
-                  <span className={`badge ${badgeClass} text-[11px]`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-4">
+                    <h3
+                      className="text-lg font-semibold transition-colors"
+                      style={{ color: '#F0F0F5' }}
+                    >
+                      {biz.name}
+                    </h3>
                     <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{
-                        background: biz.status === 'Active' ? '#4ADE80' :
-                                    biz.status === 'On Hold' ? '#FBBF24' :
-                                    biz.status === 'Complete' ? '#60A5FA' : '#9CA3AF',
-                      }}
-                    />
-                    {biz.status}
-                  </span>
+                      className="inline-block text-[11px] font-medium px-2.5 py-0.5 rounded-md"
+                      style={{ background: 'rgba(255,255,255,0.05)', color: '#A0A0B0' }}
+                    >
+                      {biz.sector}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1.5 text-[12px]" style={{ color: '#6B6B7B' }}>
+                      <Layers size={13} />
+                      {count} item{count !== 1 ? 's' : ''}
+                    </span>
+                    <span className={`badge ${badgeClass} text-[11px]`}>
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          background: biz.status === 'Active' ? '#4ADE80' :
+                                      biz.status === 'On Hold' ? '#FBBF24' :
+                                      biz.status === 'Complete' ? '#60A5FA' : '#9CA3AF',
+                        }}
+                      />
+                      {biz.status}
+                    </span>
+                  </div>
                 </div>
-                <span
-                  className="inline-block text-[11px] font-medium px-2 py-0.5 rounded-md mb-3"
-                  style={{ background: 'rgba(255,255,255,0.05)', color: '#A0A0B0' }}
-                >
-                  {biz.sector}
-                </span>
                 {biz.description && (
-                  <p className="text-[13px] mb-3 line-clamp-2" style={{ color: '#6B6B7B' }}>
+                  <p className="text-[13px] mb-3" style={{ color: '#6B6B7B' }}>
                     {biz.description}
                   </p>
                 )}
-                <div
-                  className="flex items-center justify-between text-[11px] pt-3"
-                  style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: '#6B6B7B' }}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Layers size={12} />
-                    {count} item{count !== 1 ? 's' : ''}
+                {Object.keys(sectionCounts).length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    {Object.entries(sectionCounts).map(([section, c]) => (
+                      <span
+                        key={section}
+                        className="text-[11px] font-medium px-2.5 py-1 rounded-md"
+                        style={{ background: 'rgba(59,130,246,0.08)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.15)' }}
+                      >
+                        {c} {section.charAt(0).toUpperCase() + section.slice(1)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-[11px] mt-3" style={{ color: '#6B6B7B' }}>
+                  <span>Added {new Date(biz.createdAt).toLocaleDateString('en-GB')}</span>
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#3B82F6' }}>
+                    Open workspace →
                   </span>
-                  <span>{new Date(biz.createdAt).toLocaleDateString('en-GB')}</span>
                 </div>
               </div>
             );
